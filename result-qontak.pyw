@@ -10,22 +10,24 @@ from PyPDF2 import PdfFileReader, PdfFileWriter
 import config
 from hclab.connection.oracle import Connection as OraConnect
 from hclab.demography.patient import Patient
+from hclab.detail.test import Test
 from hclab.bridging.whatsapp.validator import Validator
 from hclab.bridging.whatsapp.qontak import Qontak
 from hclab.ext.pdf import encrypt
+import include
 
 
 logging.basicConfig(filename=os.path.join(os.getcwd(),f"logs\\wa.log"), level=logging.WARNING, format="%(asctime)s - %(levelname)s : %(message)s")
 
-class AutoMail:
+class WaQontak:
 
   def __init__(self):
     self.__root = Tk()
     self.__root.title('HCLAB Whatsapp (Qontak)')
-    self.__root.geometry("570x200")
+    self.__root.geometry("370x130")
     self.__root.resizable(0,0)
 
-    self.__label = Label(self.root,anchor="e",font=("Courier",11))
+    self.__label = Label(self.__root,anchor="e",font=("Courier",11))
     self.__label.grid(row=1,column=1,padx=2,pady=5,sticky=W+E)
     self.__label.config(text="Starting...")
 
@@ -62,8 +64,8 @@ class AutoMail:
           if file.endswith('.pdf'):
 
             # adjust lno based filename here
-            lno = os.path.splitext(filename)[0].split('_')[3]
-            patname = os.path.splitext(filename)[0].split('_')[1]
+            lno = os.path.splitext(filename)[0]
+            #patname = os.path.splitext(filename)[0].split('_')[1]
 
             # get patient data
             try:
@@ -75,11 +77,17 @@ class AutoMail:
             
             # get validate data
             try:
-              validator = Validator(self.__conn, lno)
+              validator = Validator(self.__conn, lno, include.tests)
             except Exception as e:
               logging.error(e)
               print(e)
               continue
+
+
+            # assign default value of variables
+            #phone = patient.address()['3'] # get phone number from address3
+            phone = '08119890448'
+            password = patient.birth_date()
 
             self.__label.config(text=f"Processing {lno}")
             print(f"""
@@ -90,9 +98,6 @@ To   = {patient.name()} - {phone}
 -------  END  -------
             """)
 
-            # assign default value of variables
-            phone = patient.address()['3'] # get phone number from address3
-            password = patient.birth_date()
 
             # validating
             if phone != '' and phone is not None and phone[:7] != '0000000':
@@ -114,14 +119,23 @@ To   = {patient.name()} - {phone}
                     with open('token.json','w') as f:
                       json.dump(token, f)
 
+
                   # ENCRYPT PDF
-                  encrypted_pdf = encrypt(file)
+                  encrypted_pdf = encrypt(file, password, config.PDF_ENCRYPT)
 
                   # UPLOAD PDF
                   file_url = self.__wa.upload(encrypted_pdf)
 
                   # SEND MESSAGE HERE
-                  self.__wa.send(phone, patient.name(), config.QONTAK_CHANNEL, config.QONTAK_TEMPLATE, file_url)
+                  data = {
+                    'contact_no' : phone,
+                    'contact_name' : patient.name(),
+                    'param' : {
+                      'test' : Test(self.__conn, lno, validator.get_available_test()).name(),
+                      'trx_dt' : patient.trx_date()
+                    }
+                  }
+                  self.__wa.send(data, config.QONTAK_CHANNEL, config.QONTAK_TEMPLATE, file_url)
 
                   validator.save_log(phone, 'SENT', msg)
                 except Exception as e:
@@ -162,3 +176,5 @@ To   = {patient.name()} - {phone}
     except Exception as e:
         logging.debug(e)
     os.rename(file, dest)
+
+WaQontak()

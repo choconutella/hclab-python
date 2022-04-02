@@ -1,12 +1,22 @@
 class Validator:
 
-    def __init__(self, conn:object, lno:str):
+    def __init__(self, conn:object, lno:str, include:list=''):
         """
         Class to validate current Lab No.
         """
 
         self.__lno = lno
         self.__conn = conn
+        self.__include = include
+        self.__available_test = ''
+
+    
+    def get_available_test(self):
+        return self.__available_test
+
+
+    def set_include(self, include:list):
+        self.__include = include
 
 
     def  save_log(self, phone:str, status:str, msg:str):
@@ -23,14 +33,14 @@ class Validator:
 
         with self.__conn:
             query = """
-                update sine_wa_log set wa_date = sysdate, wa_to = :phone, wa_log = :msg, wa_status = :status
+                update sine_wa_log set updated_at = sysdate, wa_to = :phone, wa_log = :msg, wa_status = :status
                 where wa_tno = :lno
             """
             self.__conn.cursor.execute(query, stmt)
 
             query = """
-                insert into sine_wa_log (wa_date, wa_tno, wa_to, wa_log, wa_status)
-                select sysdate, :lno, :phone, :msg, :status from dual
+                insert into sine_wa_log (wa_tno, wa_to, wa_log, wa_status, updated_at, created_at)
+                select :lno, :phone, :msg, :status, sysdate, sysdate from dual
                 where not exists (select 1 from sine_wa_log where wa_tno = :lno)
             """
             self.__conn.cursor.execute(query,stmt)
@@ -120,8 +130,8 @@ class Validator:
             return True
         
         return False
-        
-        
+    
+    
     def is_valid_test(self):
         """
         Validation to check exclude test
@@ -134,11 +144,15 @@ class Validator:
             self.__conn.cursor.execute(query, stmt)
             records = self.__conn.cursor.fetchall()
         
-        for record in records:
-            if record in self.exclude_tests:
-                return False
 
-        return True
+        for record in records[0]:
+
+            if record in self.__include:
+
+                self.__available_test = record
+                return True
+
+        return False
         
 
     def is_valid_authorise(self):

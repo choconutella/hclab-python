@@ -7,6 +7,15 @@ class Patient:
     self.__lno = lno
     self.__conn = conn
 
+  def trx_date(self, format_date:str='dd-mm-yyyy hh24:mi')->str:
+
+    query = 'select to_char(oh_trx_dt,:format) from ord_hdr where oh_tno = :lno'
+    stmt = {'lno' : self.__lno, 'format' : format_date}
+
+    with self.__conn:
+      record = self.__conn.cursor.execute(query,stmt).fetchone()
+    
+    return record[0] if not record is None else ''
 
   def name(self)->str:
     """Get patient name"""
@@ -49,7 +58,7 @@ class Patient:
   def birth_date(self, date_format:str='ddmmyy')->str:
     """Get patient birth_date data"""
 
-    query = "select to_char(oh_bod,:date_format) from ord_hd where oh_tno = :lno"
+    query = "select to_char(oh_bod,:date_format) from ord_hdr where oh_tno = :lno"
     stmt = {'lno' : self.__lno, 'date_format' : date_format}
 
     with self.__conn:

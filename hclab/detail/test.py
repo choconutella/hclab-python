@@ -1,11 +1,20 @@
 class Test:
 
-  def __init__(self, conn:object, lno:str, test_cd:str):
+  def __init__(self, conn:object, lno:str, test_cd:str=''):
     self.__conn = conn
     self.__lno = lno
     self.__test_cd = test_cd
 
 
+
+  def name(self)->str:
+    sql = 'select ti_name from test_item where ti_code = :test_cd'
+    params = {'test_cd' : self.__test_cd}
+
+    with self.__conn as conn:
+      record = conn.cursor.execute(sql, params).fetchone()
+    
+    return record[0] if not record is None else ''
 
   def test_group(self)->str:
     

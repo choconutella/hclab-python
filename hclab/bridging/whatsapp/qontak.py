@@ -6,7 +6,7 @@ import requests
 
 class Qontak:
 
-  def __init__(self, user:str, pswd:str, client_id:str, client_secret:str, token:dict, base='chat-service.qontak.com'):
+  def __init__(self, user:str, pswd:str, client_id:str, client_secret:str, token:dict, base='https://chat-service.qontak.com'):
 
     self.__base = base
     self.__user = user
@@ -37,11 +37,16 @@ class Qontak:
           "client_id": self.__client_id,
           "client_secret": self.__client_secret
       }
-      response = requests.post(self.__base + '/oauth/token/', payload=payload)
+
+      print(payload)
+
+      response = requests.post('https://chat-service.qontak.com/oauth/token', payload=payload)
       context = response.json()
 
+      print(context)
+
       #save current token
-      if context['status']=='success':
+      if response.status_code == 201:
         return {
           'access_token' : str(context['access_token']),
           'token_type' : str(context['token_type']),
@@ -93,11 +98,11 @@ class Qontak:
         return context['status']
 
 
-  def send(self, contact_no:str, contact_name:str, channel:str, template:str, file_url:str='')->str:
+  def send(self, data:dict, channel:str, template:str, file_url:str='')->str:
     
     payload = {          
-      "to_number": contact_no,
-      "to_name": contact_name,
+      "to_number": data['contact_no'],
+      "to_name": data['contact_name'],
       "message_template_id": template,
       "channel_integration_id": channel,
       "language": {
@@ -121,7 +126,17 @@ class Qontak:
           {
             "key": "1",
             "value": "full_name",
-            "value_text": contact_name
+            "value_text": data['contact_name']
+          },
+          {
+            "key": "2",
+            "value": "test",
+            "value_text": data['param']['test']
+          },
+          {
+            "key": "3",
+            "value": "full_name",
+            "value_text": data['param']['trx_dt']
           }
         ]
       }
