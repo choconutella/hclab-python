@@ -5,9 +5,7 @@ import logging
 import time
 import json
 
-from PyPDF2 import PdfFileReader, PdfFileWriter
-
-import config
+from configparser import ConfigParser
 from hclab.connection.oracle import Connection as OraConnect
 from hclab.demography.patient import Patient
 from hclab.detail.test import Test
@@ -31,13 +29,16 @@ class WaQontak:
     self.__label.grid(row=1,column=1,padx=2,pady=5,sticky=W+E)
     self.__label.config(text="Starting...")
 
+    self.__config = ConfigParser()
+    self.__config.read('application.ini')
+
     self.__start_thread = True
-    self.__conn = OraConnect(config.HCLAB_USER, config.HCLAB_PASS, config.HCLAB_HOST)
+    self.__conn = OraConnect(self.__config['hclab']['user'], self.__config['hclab']['pass'], self.__config['hclab']['host'])
     
     with open('token.json','r') as f:
       token = json.load(f)
     
-    self.__wa = Qontak(config.QONTAK_USER, config.QONTAK_PASS, config.QONTAK_CLIENT_ID, config.QONTAK_CLIENT_SECRET, token)
+    self.__wa = Qontak(self.__config['whatsapp']['user'], self.__config['whatsapp']['pass'], self.__config['whatsapp']['client_id'], self.__config['whatsapp']['client_secret'], token)
 
 
     try:
@@ -56,9 +57,9 @@ class WaQontak:
 
       self.__label.config(text="Wait for PDF...")
 
-      for filename in os.listdir(config.PDF_PATH):
+      for filename in os.listdir(self.__config['pdf']['source']):
 
-        file = os.path.join(config.PDF_PATH,filename)
+        file = os.path.join(self.__config['pdf']['source'],filename)
         if not os.path.isdir(file):
 
           if file.endswith('.pdf'):
@@ -104,7 +105,7 @@ To   = {patient.name()} - {phone}
               
               if validator.is_repetitive():
                 # same pdf already success sent email
-                self.__move_pdf(file, os.path.join(config.PDF_BACKUP,filename))
+                self.__move_pdf(file, os.path.join(self.__config['pdf']['backup'],filename))
                 break
 
               is_valid, msg = validator.validate()
@@ -121,7 +122,7 @@ To   = {patient.name()} - {phone}
 
 
                   # ENCRYPT PDF
-                  encrypted_pdf = encrypt(file, password, config.PDF_ENCRYPT)
+                  encrypted_pdf = encrypt(file, password, self.__config['pdf']['encrypt'])
 
                   # UPLOAD PDF
                   file_url = self.__wa.upload(encrypted_pdf)
@@ -135,7 +136,7 @@ To   = {patient.name()} - {phone}
                       'trx_dt' : patient.trx_date()
                     }
                   }
-                  self.__wa.send(data, config.QONTAK_CHANNEL, config.QONTAK_TEMPLATE, file_url)
+                  self.__wa.send(data, self.__config['whatsapp']['channel'], self.__config['whatsapp']['tempalte'], file_url)
 
                   validator.save_log(phone, 'SENT', msg)
                 except Exception as e:
@@ -161,7 +162,7 @@ To   = {patient.name()} - {phone}
                 continue
 
           # backup pdf that already processed to temp_pdf folder
-          self.__move_pdf(file, os.path.join(config.PDF_BACKUP,filename))
+          self.__move_pdf(file, os.path.join(self.__config['pdf']['backup'],filename))
       
         time.sleep(1)
 
