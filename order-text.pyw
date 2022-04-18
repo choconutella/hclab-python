@@ -5,7 +5,6 @@ import logging
 import os
 import time
 from tkinter import *
-import config
 
 from configparser import ConfigParser
 from hclab.connection.oracle import Connection as OraConnect
@@ -37,7 +36,7 @@ class Process():
       self.__app.read('application.ini')
 
       # DEFINE CONNECTION HERE
-      self.__ora = OraConnect(config.HCLAB_USER, config.HCLAB_PASS, config.HCLAB_HOST)
+      self.__ora = OraConnect(self.__app['hclab']['user'], self.__app['hclab']['pass'], self.__app['hclab']['host'])
 
       try:
         self.__thread = threading.Thread(target=self.check)
@@ -55,8 +54,8 @@ class Process():
 
         while True:
             self.__label.config(text="Wait for Order...")
-            for filename in os.listdir(config.hl7_out_path):
-                file = os.path.join(config.hl7_out_path,filename)
+            for filename in os.listdir(self.__app['his']['file_path']):
+                file = os.path.join(self.__app['his']['file_path'],filename)
                 if os.path.isdir(file):
                     pass
                 else:
