@@ -3,6 +3,5 @@ config.py
 token.json
 requirement.txt
 include.py
-application.ini
 addon.py
 addon/

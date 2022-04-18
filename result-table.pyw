@@ -3,17 +3,17 @@ import threading
 import logging
 import os
 import time
+from configparser import ConfigParser
 from shutil import copy
 from tkinter import *
-import config
 from hclab.connection.oracle import Connection as OraConnect
 from hclab.hl7.r01 import R01 as Result
-from hclab.detail.test import Test
+from hclab.test.detail import Detail
 from hclab.bridging.connection import Connection as MysqlConnect
 from hclab.bridging.table.result import save
 
 
-# setup logging enviriionment
+# setup logging environment
 logging.basicConfig(filename=os.path.join(os.getcwd(),f"logs\\log_result.log"),
                     level=logging.WARNING, 
                     format="%(asctime)s - %(levelname)s : %(message)s")
@@ -23,19 +23,22 @@ class Process():
 
     def __init__(self):
       self.__root = Tk()
-      self.__root.title('HCLAB Auto-email')
+      self.__root.title('Uploader Result')
       self.__root.geometry("570x200")
       self.__root.resizable(0,0)
 
-      self.__label = Label(self.root,anchor="e",font=("Courier",11))
+      self.__label = Label(self.__root,anchor="e",font=("Courier",11))
       self.__label.grid(row=1,column=1,padx=2,pady=5,sticky=W+E)
       self.__label.config(text="Starting...")
 
       self.__start_thread = True
 
+      self.__app = ConfigParser()
+
+
       # DEFINE CONNECTION HERE
-      self.__ora = OraConnect(config.HCLAB_USER, config.HCLAB_PASS, config.HCLAB_HOST)
-      self.__mysql = MysqlConnect(config.MYSQL_USER, config.MYSQL_PASS, config.MYSQL_HOST)
+      self.__ora = OraConnect(self.__app['hclab']['user'], self.__app['hclab']['pass'], self.__app['hclab']['host'])
+      self.__mysql = MysqlConnect(self.__app['mysql']['user'], self.__app['mysql']['pass'], self.__app['mysql']['host'])
 
 
       try:
@@ -49,15 +52,12 @@ class Process():
         
 
     def check_result(self):
-        """
-        Check file result at HL7_OUT folder
-        if file .R01 exists, then process the file
-        if other extension, file will be deleted
-        """
+        '''Check .RO1 file result at HL7_OUT folder, other extension will be deleted'''
+
         while True:
             self.__label.config(text="Wait for Result...")
-            for filename in os.listdir(config.hl7_out_path):
-                file = os.path.join(config.hl7_out_path,filename)
+            for filename in os.listdir(self.__app['file']['hl7_out']):
+                file = os.path.join(self.__app['file']['hl7_out'],filename)
                 if os.path.isdir(file):
                     pass
                 else:
@@ -79,10 +79,13 @@ class Process():
 
 
     def post_result(self,file:str):
-      """
+      '''
       File result will be inserted to HIS Result table
-      :param file: Path of result file
-      """
+
+      Parameter: 
+        file : str 
+            Path of result file
+      '''
 
       result = Result(file)
       counter = 1
@@ -90,7 +93,7 @@ class Process():
       while 'obx'+str(counter) in result.obx:
 
         obx = result.parse_obx(result.obx['obx'+str(counter)])
-        detail = Test(self.__ora, result.lno, obx['test_cd'])
+        detail = Detail(self.__ora, result.lno, obx['test_cd'])
         specimen = detail.check_in()
         release = detail.release()
         authorise = detail.authorise()

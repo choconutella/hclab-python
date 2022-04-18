@@ -8,7 +8,7 @@ import json
 from configparser import ConfigParser
 from hclab.connection.oracle import Connection as OraConnect
 from hclab.demography.patient import Patient
-from hclab.detail.test import Test
+from hclab.test.detail import Detail
 from hclab.bridging.whatsapp.validator import Validator
 from hclab.bridging.whatsapp.qontak import Qontak
 from hclab.ext.pdf import encrypt
@@ -132,7 +132,7 @@ To   = {patient.name()} - {phone}
                     'contact_no' : phone,
                     'contact_name' : patient.name(),
                     'param' : {
-                      'test' : Test(self.__conn, lno, validator.get_available_test()).name(),
+                      'test' : Detail(self.__conn, lno, validator.get_available_test()).name(),
                       'trx_dt' : patient.trx_date()
                     }
                   }
