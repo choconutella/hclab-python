@@ -5,3 +5,4 @@ requirement.txt
 include.py
 addon.py
 addon/
+*/__pycache__/
