@@ -1,19 +1,24 @@
-import cx_Oracle
+import pyodbc
 
 class Connection:
 
-	def __init__(self,user:str='hclab',pswd:str='hclab',host:str='localhost/hclab'):
+	def __init__(self,user:str,pswd:str,host:str,db:str):
 
-		self.__user = user
-		self.__pswd = pswd
-		self.__host = host
+		self.user = user
+		self.pswd = pswd
+		self.host = host
+		self.db = db
 
 		self.connector = None
 
 
 	def __enter__(self):
 
-		self.connector = cx_Oracle.connect(self.__user,self.__pswd,self.__host)
+		self.connector = pyodbc.connect('Driver={SQL Server};'
+                                f'Server={self.host};'
+                                f'Database={self.db};'
+                                f'UID={self.user};'
+                                f'PWD={self.pswd};')
 		self.cursor = self.connector.cursor()
 		return self
 

@@ -86,8 +86,8 @@ class WaQontak:
 
 
             # assign default value of variables
-            #phone = patient.address()['3'] # get phone number from address3
-            phone = '08119890448'
+            phone = patient.address()['3'] # get phone number from address3
+            #phone = '08119890448'
             password = patient.birth_date()
 
             self.__label.config(text=f"Processing {lno}")
@@ -178,4 +178,5 @@ To   = {patient.name()} - {phone}
         logging.debug(e)
     os.rename(file, dest)
 
-WaQontak()
+
+if __name__ == '__main__' : WaQontak()
