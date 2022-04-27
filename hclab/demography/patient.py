@@ -76,9 +76,9 @@ class Patient:
       record = self.__conn.cursor.execute(query, stmt).fetchone()
     
     return {
-      '1' : record[0] if not record[0] is None else '',
-      '2' : record[1] if not record[1] is None else '',
-      '3' : record[2] if not record[2] is None else '',
-      '4' : record[3] if not record[3] is None else ''
+      '1' : record[0] if not record is None and  not record[0] is None else '',
+      '2' : record[1] if not record is None and not record[1] is None else '',
+      '3' : record[2] if not record is None and not record[2] is None else '',
+      '4' : record[3] if not record is None and  not record[3] is None else ''
     }
 
