@@ -1,51 +1,116 @@
 def insert(conn:object, data:dict):
   sql = """
-    insert into ord_dtl
+    insert into ResultDt
     (
-      ono, test_cd, test_nm, data_type, 
-      result_value, unit, flag, ref_range, status, test_comment, method,
-      specimen_cd, specimen_nm, specimen_by_cd, specimen_by_nm, specimen_dt, 
-      release_by_cd, release_by_nm, release_on,
-      authorise_by_cd, authorise_by_nm, authorise_on,
-      phoned_by_cd, phoned_by_nm, phoned_on,
-      disp_seq, order_testid, order_testnm, test_group, item_parent
+      id, ono, seqno, test_cd, test_nm, data_typ, 
+      result_value, result_ft, unit, flag, ref_range, status, test_comment, 
+      validate_by, validate_on,
+      disp_seq, order_testid, order_testnm, test_group, item_parent, orgcd, createddate
     )
     select
-      :ono,:test_cd,:test_nm,:data_type,
-      :result_value,unit,flag,ref_range,status,test_comment, detail.method,
-      :specimen_cd,:specimen_nm,:specimen_by_cd,:specimen_by_nm,:specimen_dt,
-      :release_by_cd,:release_by_nm,:release_on,
-      :authorise_by_cd,:authorise_by_nm,:authorise_on,
-      :phoned_by_cd,:phoned_by_nm,:phoned_on,
-      :disp_seq, :order_testid, :order_testnm,:group_name,:item_parent
-    where not exists (select 1 from ord_dtl where ono = :ono and test_cd = :test_cd)
+      ?,?,?,?,?,?,
+      ?,?,?,?,?,?,?, 
+      ?,?,
+      ?,?,?,?,?,?, getdate()
+    where not exists (select 1 from ResultDt where ono=? and test_cd=? and orgcd=?)
   """
-  # print
-  # print(conn.text(sql, data))
+  
+  params = (
+    data['ono'], data['ono'], data['seqno'],data['test_cd'],data['test_nm'],data['data_type'],
+    data['result_value'],data['result_ft'],data['unit'],data['flag'],data['ref_range'],data['status'],data['test_comment'],
+    data['authorise_by'], data['authorise_on'],
+    data['disp_seq'],data['order_testid'],data['order_testnm'],data['test_group'],data['item_parent'],data['orgcd'],
+    data['ono'],data['test_cd'],data['orgcd']
+  )
+
   with conn:
-    conn.cursor.execute(sql, data)
+    try:
+      conn.cursor.execute(sql, params)
+    except ValueError as e:
+      print(f'INS1-{e}')
 
 def update(conn:object, data:dict):
   sql = """
-    update ord_dtl set
-    test_nm = :test_nm, result_value = :result_value, ref_range = :ref_range,
-    status = :status, test_comment = :test_comment, 
-    specimen_cd = :specimen_cd, specimen_nm = :specimen_nm, specimen_by_cd = :specimen_by_cd, specimen_by_nm = :specimen_by_nm, specimen_dt = :specimen_dt,
-    release_on = :release_on, release_by_cd = :release_by_cd, release_by_nm = :release_by_nm,
-    authorise_on = :authorise_on, authorise_by_cd = :authorise_by_cd, authorise_by_nm = :authorise_by_nm,
-    phoned_by_cd = :phoned_by_cd, phoned_by_nm = :phoned_by_nm, phoned_on = :phoned_on,
-    disp_seq = :disp_seq, test_group = :test_group, method = :method
-    where ono = :ono and test_cd = :test_cd
+    update ResultDt set
+    test_nm=? , result_value=?, result_ft=?, ref_range=?, unit = ?,
+    status=?, test_comment=?, 
+    validate_on=?, validate_by=?,
+    disp_seq=?, test_group=?
+    where ono=? and test_cd=?
   """
-  # print
-  # print(conn.text(sql, data))
+  params = (
+    data['test_nm'], data['result_value'],data['result_ft'],data['ref_range'],data['unit'],
+    data['status'],data['test_comment'],
+    data['authorise_on'],data['authorise_by'],
+    data['disp_seq'],data['test_group'],
+    data['ono'],data['test_cd']
+  )
+
   with conn:
-    conn.cursor.execute(sql, data)
+    try:
+      conn.cursor.execute(sql, params)
+    except ValueError as e:
+      print(f'INS2-{e}')
 
 
-def delete(conn:object, data:dict):
-  pass
+def delete(conn:object, ono:str, test_cd:str):
+  sql = """
+    delete from ResultDt where ono=? and test_cd=?
+  """
+  params = (ono,test_cd)
+  with conn:
+    conn.cursor.execute(sql,params)
 
 def save(conn:object, data:dict):
   update(conn, data)
   insert(conn, data)
+
+
+def insert_header(conn:object, data:dict):
+  sql = """
+    insert into ResultHd
+    (
+      id, pid, apid, pname, ono, lno, request_dt, source_cd, source_nm, 
+      clinician_cd, clinician_nm, priority, comment, visitno, 
+      orgcd, createddate
+    )
+    select
+    ?,?,?,?,?,?,?,?,?,
+    ?,?,?,?,?,
+    ?, getdate()
+    where not exists(select 1 from ResultHd where ono=? and orgcd=?)
+  """
+  params = (
+    data['ono'],data['pid'],data['apid'],data['pname'],data['ono'],data['lno'],data['request_dt'],data['source_cd'],data['source_nm'],
+    data['clinician_cd'],data['clinician_nm'],data['priority'],data['comment'],data['visitno'],
+    data['orgcd'],
+    data['ono'],data['orgcd']
+  )
+  with conn:
+    try:
+      conn.cursor.execute(sql, params)
+    except ValueError as e:
+      print(f'INH1-{e}')
+
+def update_header(conn:object, data:dict):
+  sql = """
+    update ResultHd set
+    pid=?, apid=?, pname=?, request_dt=?, source_cd=?, source_nm=?,
+    clinician_cd=?, clinician_nm=?, priority=?, comment=?, visitno=?
+    where ono=?
+  """
+  params = (
+    data['pid'],data['apid'],data['pname'],data['request_dt'],data['source_cd'],data['source_nm'],
+    data['clinician_cd'],data['clinician_nm'],data['priority'],data['comment'],data['visitno'],
+    data['ono']
+  )
+
+  with conn:
+    try:
+      conn.cursor.execute(sql, params)
+    except ValueError as e:
+      print(f'INH2-{e}')
+
+def save_header(conn:object, data:dict):
+  update_header(conn, data)
+  insert_header(conn, data)
