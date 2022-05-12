@@ -1,4 +1,4 @@
-#!.venv/scripts/python.exe
+#!.venv/scripts/pythonw.exe
 import threading
 import logging
 import os
@@ -7,10 +7,10 @@ from configparser import ConfigParser
 from shutil import copy
 from tkinter import *
 from hclab.connection.oracle import Connection as OraConnect
-from hclab.hl7.r01 import R01 as Result
+from hclab.hl7.r01 import R01
 from hclab.test.detail import Detail
-from hclab.bridging.connection import Connection as MysqlConnect
-from hclab.bridging.table.result import save
+from hclab.bridging.connection import Connection as HisConnect
+from hclab.bridging.table.result import *
 
 
 # setup logging environment
@@ -24,7 +24,7 @@ class Process():
     def __init__(self):
       self.__root = Tk()
       self.__root.title('Uploader Result')
-      self.__root.geometry("570x200")
+      self.__root.geometry("370x130")
       self.__root.resizable(0,0)
 
       self.__label = Label(self.__root,anchor="e",font=("Courier",11))
@@ -34,12 +34,11 @@ class Process():
       self.__start_thread = True
 
       self.__app = ConfigParser()
-
+      self.__app.read('application.ini')
 
       # DEFINE CONNECTION HERE
       self.__ora = OraConnect(self.__app['hclab']['user'], self.__app['hclab']['pass'], self.__app['hclab']['host'])
-      self.__mysql = MysqlConnect(self.__app['mysql']['user'], self.__app['mysql']['pass'], self.__app['mysql']['host'])
-
+      self.__his = HisConnect(self.__app['his']['user'], self.__app['his']['pass'], self.__app['his']['host'], self.__app['his']['db'])
 
       try:
         self.__thread = threading.Thread(target=self.check_result)
@@ -64,10 +63,14 @@ class Process():
                   if file.endswith('.R01'):
                     self.__label.config(text=f"Processing {filename}")
                     try:
-                        self.post_result(file)
-                    except:
-                        time.sleep(2)
-                        continue
+                      self.post_result(file)
+                    except ValueError as e:
+                      err = f'E001-Error processing result. {e}'
+                      logging.error(err)
+                      print(err)
+                      self.__label.config(text=err)
+                      time.sleep(2)
+                      continue
                   else:
                       os.remove(file)
             
@@ -87,52 +90,99 @@ class Process():
             Path of result file
       '''
 
-      result = Result(file)
+      result = R01(file)
       counter = 1
 
       while 'obx'+str(counter) in result.obx:
 
         obx = result.parse_obx(result.obx['obx'+str(counter)])
+
+        # delete when status is 'D'
+        if obx['status'] == 'D' : 
+          delete(self.__his,result.ono,obx['test_cd'])
+          counter += 1
+          continue
+
         detail = Detail(self.__ora, result.lno, obx['test_cd'])
-        specimen = detail.check_in()
-        release = detail.release()
         authorise = detail.authorise()
-        phone = detail.phone()
 
         # handle result MB
         if obx['test_cd'] == 'MBFTR':
           obx.update(test_cd = result.order_testid, test_nm = result.order_testnm)
 
+        # separate result from freetext
+        result_value = result_ft = ''
+        if obx['data_type'] == 'FT':
+          result_ft = obx['result_value']
+        else:
+          result_value = obx['result_value']
+
+        
         #PROCESS RESULT TO SIRS
         data = {
           'ono' : result.ono, 
-          'test_cd' : obx['test_cd'],  
+          'test_cd' : obx['test_cd'], 
+          'seqno' : ('000'+str(counter))[-3:],
           'test_nm' : obx['test_nm'], 
           'data_type' : obx['data_type'], 
-          'result_value' : obx['result_value'], 'unit' : obx['unit'], 'flag' : obx['flag'], 'ref_range' : obx['ref_range'], 
+          'result_value' : result_value, 
+          'result_ft' : result_ft,
+          'unit' : obx['unit'], 'flag' : obx['flag'], 'ref_range' : obx['ref_range'], 
           'status' : obx['status'], 
           'test_comment' : obx['test_comment'], 
-          'method' : detail.method(),
-          'specimen_cd' : specimen['type_cd'], 'specimen_nm' : specimen['type_nm'], 'specimen_by_cd' : specimen['by_cd'], 'specimen_by_nm' : specimen['by_nm'], 'specimen_dt' : specimen['on'], 
-          'release_by_cd' : release['by_cd'], 'release_by_nm' : release['by_nm'],  'release_on' : release['on'],
-          'authorise_by_cd' : authorise['by_cd'], 'authorise_by_nm' : authorise['by_nm'],  'authorise_on' : authorise['on'],
-          'phoned_by_cd' : phone['by_cd'], 'phoned_by_nm' : phone['by_nm'], 'phoned_on' : phone['on'],
-          'disp_seq' : detail.sequence(), 
+          'authorise_by' : authorise['by_cd'] + '^' + authorise['by_nm'],  'authorise_on' : authorise['on'],
+          'disp_seq' : detail.sequence() + '_' + ('000'+str(counter))[-3:], 
           'order_testid' : result.order_testid, 
           'order_testnm' : result.order_testnm, 
           'test_group' : detail.test_group(), 
-          'item_parent' : detail.item_parent()
+          'item_parent' : detail.item_parent(),
+          'orgcd' : self.__app['his']['site']
         }
+
+        # SAVE DETAIL
         try:
-          save(self.__mysql, data)
-        except Exception as e:
-            logging.error(f'Error post to HIS resdt. {e}')
+          save(self.__his, data)
+        except ValueError as e:
+          err = f'E002-Error post detail to HIS. {e}'
+          logging.error(err)
+          print(err)
+          self.__label.config(text=err)
+        
+        counter += 1
+
+      header = {
+        'pid' : result.pid, 
+        'apid' : result.apid, 
+        'pname' : result.pname, 
+        'ono' : result.ono, 
+        'lno' : result.lno, 
+        'request_dt' : result.request_dt, 
+        'source_cd' : result.source_cd, 
+        'source_nm' : result.source_nm, 
+        'clinician_cd' : result.clinician_cd, 
+        'clinician_nm' : result.clinician_nm, 
+        'priority' : result.priority, 
+        'comment' : result.comment, 
+        'visitno' : result.visitno, 
+        'orgcd' : self.__app['his']['site']
+      }
+
+      # SAVE HEADER
+      try:
+        save_header(self.__his,header)
+      except ValueError as e:
+        err = f'E003-Error post header to HIS. {e}'
+        logging.error(err)
+        print(err)
+        self.__label.config(text=err)
+
 
       if os.path.exists(file):
-          copy(file,os.path.join(self.temp_result,os.path.basename(file)))
+          copy(file,os.path.join(self.__app['file']['temp_result'],os.path.basename(file)))
           os.remove(file)
       else:
           logging.error("RESULTEND-The file does not exist")
+      
         
                     
-process = Process()
+if __name__ == '__main__' : Process()
