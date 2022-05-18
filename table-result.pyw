@@ -24,7 +24,7 @@ class Process():
     def __init__(self):
       self.__root = Tk()
       self.__root.title('Uploader Result')
-      self.__root.geometry("570x200")
+      self.__root.geometry("370x130")
       self.__root.resizable(0,0)
 
       self.__label = Label(self.__root,anchor="e",font=("Courier",11))
@@ -128,8 +128,10 @@ class Process():
         except Exception as e:
             logging.error(f'Error post to HIS resdt. {e}')
 
+        counter += 1
+
       if os.path.exists(file):
-          copy(file,os.path.join(self.temp_result,os.path.basename(file)))
+          copy(file,os.path.join(self.__app['file']['temp_result'],os.path.basename(file)))
           os.remove(file)
       else:
           logging.error("RESULTEND-The file does not exist")
