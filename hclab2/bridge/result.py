@@ -99,7 +99,7 @@ class Phone(_Id):
 
 
 @dataclass
-class ResultDtl:
+class Result:
 
   conn:object
   lno:str
@@ -130,20 +130,3 @@ class ResultDtl:
     self.phone = Validate(self.conn, self.lno, self.test_cd).get()
   
 
-@dataclass
-class ResultHdr:
-
-  conn:object
-  lno:str
-  ono:str = field(default='')
-  pid:str = field(default='')
-  apid:str = field(default='')
-  name:str = field(default='')
-  request_dt:str = field(default='')
-  source:dict = field(default='')
-  clinician:dict = field(default='')
-  priority:str = field(default='')
-  comment:str = field(default='')
-  visitno:str = field(default='')
-
-  

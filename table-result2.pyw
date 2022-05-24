@@ -10,7 +10,7 @@ from tkinter import *
 import sqlalchemy as db
 
 from hclab2.hl7.r01 import R01
-from hclab2.bridge.result import ResultDtl, ResultHdr
+from hclab2.bridge.result import Result
 from hclab2.item import Item
 from hisquery.post_detail import save_detail
 from hisquery.delete_detail import delete
@@ -100,6 +100,7 @@ class Process():
       r01 = R01(file)
       counter = 1
       profile = False
+      status = ''
 
       while 'obx'+str(counter) in r01.obx:
 
@@ -122,7 +123,7 @@ class Process():
         disp_seq = f'{item.group_seq}_{item.seq}_{("000"+str(counter))[-3:]}' 
 
         # save detail
-        result = ResultDtl(self.__ora,
+        result = Result(self.__ora,
                         r01.lno,
                         r01.ono,
                         obx['test_cd'],
@@ -146,16 +147,17 @@ class Process():
         # check is it profile test
         if result.order_testid != obx['test_cd']:
           profile = True
+          status = obx['status']
         
         counter += 1
 
       if profile:
 
-        item = Item(self.__ora, obx['test_cd'])
+        item = Item(self.__ora, r01.order_testid)
         disp_seq = f'{item.group_seq}_{item.seq}_000' 
 
         # save test header
-        result = ResultDtl(
+        result = Result(
           self.__ora,
           r01.lno,
           r01.ono,
@@ -167,7 +169,7 @@ class Process():
           '',
           '',
           '',
-          'F',
+          status,
           '',
           disp_seq,
           r01.order_testid,
@@ -179,21 +181,7 @@ class Process():
 
 
       # save header
-      header = ResultHdr(
-        self.__ora, 
-        r01.lno, 
-        r01.ono, 
-        r01.pid, 
-        r01.apid, 
-        r01.pname, 
-        r01.request_dt,
-        {'code' : r01.source_cd, 'name' : r01.source_nm}, 
-        {'code' : r01.clinician_cd, 'name' : r01.clinician_nm},
-        r01.priority, 
-        r01.comment, 
-        r01.visitno
-      )
-      save_header(self.__ora, header)
+      save_header(self.__ora, r01)
 
 
       if os.path.exists(file):
