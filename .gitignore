@@ -6,3 +6,9 @@ include.py
 addon.py
 addon/
 */__pycache__/
+application.ini
+api_wa_auth.py
+api_wa.pyw
+test.py
+token_mika.json
+token_qontak.json

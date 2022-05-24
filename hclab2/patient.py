@@ -5,6 +5,8 @@ class Patient:
 
   conn:object
   lno: str
+  site:str = field(init=False)
+  trx_dt: str = field(init=False)
   pid: str = field(init=False)
   apid: str = field(init=False)
   name: str = field(init=False)
@@ -29,7 +31,7 @@ class Patient:
     if not self.lno is None:
       sql = '''
         select oh_pid, oh_apid, oh_last_name, oh_bod, oh_sex, oh_pataddr1, oh_pataddr2, oh_pataddr3, oh_pataddr4,
-        ic_no, dbemail, dbhphone_no
+        ic_no, dbemail, dbhphone_no, (select sid_name from site_id where sid_code = oh_ls_code), to_char(oh_trx_dt,'yyyymmdd')
         from ord_hdr
         join cust_master on oh_pid = dbcode
         where oh_tno = :lno
@@ -55,5 +57,7 @@ class Patient:
     self.ic_no = record[9]
     self.email = record[10]
     self.phone = record[11]
+    self.site = record[12]
+    self.trx_dt = record[13]
 
     
