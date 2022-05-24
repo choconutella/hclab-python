@@ -7,8 +7,8 @@ addon.py
 addon/
 */__pycache__/
 application.ini
-api_wa_auth.py
-api_wa.pyw
+mika_wa_auth.py
+mika_wa.pyw
+mika_token.json
 test.py
-token_mika.json
-token_qontak.json
+qontak_token.json

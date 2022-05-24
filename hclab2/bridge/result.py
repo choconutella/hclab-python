@@ -99,16 +99,26 @@ class Phone(_Id):
 
 
 @dataclass
-class Result:
-  
+class ResultDtl:
+
   conn:object
   lno:str
+  ono:str
   test_cd:str
   test_nm:str
   data_type:str
   result_value:str
+  result_ft:str
   ref_range:str
   unit:str
+  flag:str
+  status:str
+  test_comment:str
+  disp_seq:str
+  order_testid:str
+  order_testnm:str
+  test_group:str
+  item_parent:str
   specimen:dict[str:str] = field(init=False)
   validate:dict[str:str] = field(init=False)
   phone:dict[str:str] = field(init=False)
@@ -120,3 +130,20 @@ class Result:
     self.phone = Validate(self.conn, self.lno, self.test_cd).get()
   
 
+@dataclass
+class ResultHdr:
+
+  conn:object
+  lno:str
+  ono:str = field(default='')
+  pid:str = field(default='')
+  apid:str = field(default='')
+  name:str = field(default='')
+  request_dt:str = field(default='')
+  source:dict = field(default='')
+  clinician:dict = field(default='')
+  priority:str = field(default='')
+  comment:str = field(default='')
+  visitno:str = field(default='')
+
+  

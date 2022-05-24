@@ -5,13 +5,20 @@ from multiprocessing.sharedctypes import Value
 class Item:
   conn:object
   code:str
+  name:str = field(init=False, default='')
+  seq:str = field(init=False, default='000')
+  parent:str = field(init=False, default='000000')
+  group_code:str = field(init=False)
+  group_name:str = field(init=False)
+  group_seq:str = field(init=False, default='000')
   method:str = field(init=False)
-  mapping:dict = field(init=False)
+  lno:str = field(init=False, default='')
 
   def __post_init__(self):
-    pass
+    self.detail()
 
-  def getMapping(self, ti_code=None, his_code=None):
+
+  def get_mapping(self, ti_code=None, his_code=None):
     
     if ti_code is None and his_code is None:
       raise ValueError('TI_CODE or HIS_CODE should filled with value')
@@ -31,7 +38,7 @@ class Item:
       record = self.conn.execute(sql,params).fetchone()
 
     if record is None:
-      raise ValueError('Mapping data cannot retrieved')
+      raise ValueError('Mapping data not found')
     
     return {
       'his_code' : record[0],
@@ -39,17 +46,31 @@ class Item:
     }
 
 
-  def getMethod(self):
-    
+  def detail(self):
+
+    if self.lno == '':
+      return
+
     sql = '''
-      select ti_method from test_item where ti_code=:code
-    '''
-    params = {'code':self.code}
+        select ti_name, substr('000'||ti_disp_seq,-3), od_item_parent, od_test_grp, tg_name, substr('000'||tg_ls_code,-3), ti_method
+        from ord_dtl 
+        join test_group on od_test_grp = tg_code
+        join test_item on ti_code = od_order_ti
+        where od_testcode = :code and od_tno = :lno
+      '''
+    params = {'code':self.code, 'lno' : self.lno}
+
     with self.conn:
       record = self.conn.execute(sql,params).fetchone()
     
     if record is None:
-      raise ValueError('Test method cannot retrieved')
-
-
+      raise ValueError('Test group not found')
+    
+    self.item_name = record[0]
+    self.item_seq = record[1]
+    self.item_parent = record[2]
+    self.group_code = record[3]
+    self.group_name = record[4]
+    self.group_seq = record[5]
+    self.method = record[6]
 
