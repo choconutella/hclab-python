@@ -1,9 +1,9 @@
 def delete(engine:object, ono:str, test_cd:str):
 
   sql = """
-    delete from TRX_SYS_RES_DT where ono= :ono and test_cd= :test_cd
+    delete from ResultDt where ono=? and test_cd=?
   """
-  params = {'ono':ono,'test_cd':test_cd}
+  params = (ono,test_cd)
   try:
     with engine.connect() as conn:
       conn.execute(sql,params)

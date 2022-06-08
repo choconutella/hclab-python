@@ -6,6 +6,7 @@ include.py
 addon.py
 addon/
 */__pycache__/
+*/*/__pycache__/
 application.ini
 mika_wa_auth.py
 mika_wa.pyw

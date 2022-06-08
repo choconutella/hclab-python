@@ -1,59 +1,43 @@
-def insert(engine:object, result:object):
+def insert(engine:object, result:object, site:str):
   sql = '''
-    insert into TRX_SYS_RES
+    insert into ResultHd
     (
-      pid, apid, pname, ono, lno, request_dt, source_cd, source_nm, 
-      clinician_cd, clinician_nm, priority, cmt, visitno
+      id, pid, apid, pname, ono, lno, request_dt, source_cd, source_nm, 
+      clinician_cd, clinician_nm, priority, comment, visitno, 
+      orgcd, createddate
     )
     select
-      :pid,:apid,:name,:ono,:lno,:request_dt,:source_cd,:source_nm,
-      :clincian_cd, :clinician_nm, :priority, :comment, :visitno
-    where not exists(select 1 from TRX_SYS_RES where ono=:ono)
+    ?,?,?,?,?,?,?,?,?,
+    ?,?,?,?,?,
+    ?, getdate()
+    where not exists(select 1 from ResultHd where ono=? and orgcd=?)
   '''
-  params = {
-    'pid' : result.pid,
-    'apid' : result.apid,
-    'name' : result.name,
-    'ono' : result.ono,
-    'lno' : result.lno,
-    'result_dt' : result.request_dt,
-    'source_cd' : result.source_cd,
-    'source_nm' : result.source_nm,
-    'clinician_cd' : result.clinician_cd,
-    'clinician_nm' : result.clinician_nm,
-    'priority' : result.priority,
-    'comment' : result.comment,
-    'visitno' : result.visitno
-  }
-
+  params = (
+    result.ono,result.pid,result.apid,result.pname,result.ono,result.lno,result.request_dt,result.source_cd,result.source_nm,
+    result.clinician_cd,result.clinician_nm,result.priority,result.comment,result.visitno,
+    site,
+    result.ono,site
+  )
+  
   try:
     with engine.connect() as conn:
       conn.execute(sql,params)
   except ValueError as e:
     raise ValueError(f'The header of lab No. {result.lno} cannot be inserted')
 
-def update(engine:object, result:object):
+def update(engine:object, result:object, site:str):
   sql = '''
-    update TRX_SYS_RES set
-    pid= :pid, apid= :apid, pname= :name, request_dt= :request_dt, source_cd= :source_cd, source_nm= :source_nm,
-    clinician_cd= :clinician_cd, clinician_nm= :clinician_nm, priority= :priority, cmt= :comment, visitno= :visitno
-    where ono= :ono
+    update ResultHd set
+    pid=?, apid=?, pname=?, request_dt=?, source_cd=?, source_nm=?,
+    clinician_cd=?, clinician_nm=?, priority=?, comment=?, visitno=?
+    where ono=? and orgcd=?
   '''
 
-  params = {
-    'pid' : result.pid,
-    'apid' : result.apid,
-    'name' : result.name,
-    'ono' : result.ono,
-    'result_dt' : result.request_dt,
-    'source_cd' : result.source['code'],
-    'source_nm' : result.source['name'],
-    'clinician_cd' : result.clinician['code'],
-    'clinician_nm' : result.clinician['name'],
-    'priority' : result.priority,
-    'comment' : result.comment,
-    'visitno' : result.visitno
-  }
+  params = (
+    result.pid,result.apid,result.pname,result.request_dt,result.source_cd,result.source_nm,
+    result.clinician_cd,result.clinician_nm,result.priority,result.comment,result.visitno,
+    result.ono,site
+  )
 
   try:
 
@@ -64,7 +48,7 @@ def update(engine:object, result:object):
     raise ValueError(f'The header of Lab No. {result.lno} cannot be updated')
 
 
-def save_header(engine:object, result:object):
+def save_header(engine:object, result:object, site:str):
   
-  update(engine, result)
-  insert(engine, result)
+  update(engine, result, site)
+  insert(engine, result, site)

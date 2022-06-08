@@ -49,7 +49,5 @@ class R01:
       'flag' : parse[5],
       'ref_range' : parse[6],
       'status' : parse[7],
-      'test_comment' : parse[8],
-      'validate_by' : parse[9],
-      'validate_on' : parse[10]
+      'test_comment' : parse[8]
     }

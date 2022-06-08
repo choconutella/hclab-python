@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 
 @dataclass
 class _Id:
-  conn:object
+  engine:object
   lno:str
   test_cd:str
 
@@ -10,6 +10,8 @@ class CheckIn(_Id):
 
   def __init__(self, conn:object, lno:str, test_cd:str):
     super().__init__(conn,lno,test_cd)
+
+    self.keys = ['type_cd', 'type_nm', 'on', 'by_cd', 'by_nm']
 
   def get(self)->dict:
     
@@ -23,55 +25,49 @@ class CheckIn(_Id):
     '''
     params = {'lno' : self.lno, 'test_cd' : self.test_cd}
     
-    with self.conn:
-      record = self.conn.execute(sql,params).fetchone()
+    with self.engine.connect() as conn:
+      record = conn.execute(sql,params).fetchone()
 
     if record is None:
-      raise ValueError('Check-in data can not retrieved')
+      print(f'{self.lno} - {self.test_cd} check-in data can not retrieved')
+      return {self.keys[i]:'' for i in range(len(self.keys))}
     
-    return {
-      'type_cd' : record[0],
-      'type_nm' : record[1],
-      'on' : record[2],
-      'by_cd' : record[3],
-      'by_nm' : record[4]
-    }
+    return {self.keys[i]:record[i] if not record[i] is None else '' for i in range(len(record))}
+
 
 class Validate(_Id):
 
   def __init__(self, conn:object, lno:str, test_cd:str):
     super().__init__(conn, lno, test_cd)
+    self.keys = ['release_by_cd', 'release_by_nm', 'release_on', 'authorise_by_cd', 'authorise_by_nm', 'authorise_on']
 
   def get(self):
     
     sql = '''
       select od_validate_by, (select user_name from user_account where user_id = od_validate_by), to_char(od_validate_on,'yyyymmddhh24miss'),
-      od_update_by, (select user_name from user_account where user_id = od_update_by), to_char(od_update_on, 'yyyymmddhh24miss)
-      from ord_dt
+      od_update_by, (select user_name from user_account where user_id = od_update_by), to_char(od_update_on, 'yyyymmddhh24miss')
+      from ord_dtl
       where od_tno = :lno and od_testcode = :test_cd
     '''
     params = {'lno' : self.lno, 'test_cd' : self.test_cd}
 
-    with self.conn:
-      record = self.conn.execute(sql,params).fetchone()
+    with self.engine.connect() as conn:
+      record = conn.execute(sql,params).fetchone()
+  
     
     if record is None:
-      raise ValueError('Validate data cannot retrieved')
-    
-    return {
-      'release_by_cd' : record[0],
-      'release_by_nm' : record[1],
-      'release_on' : record[2],
-      'authorie_by_cd' : record[3],
-      'authorise_by_nm' : record[4],
-      'authorise_on' : record[5]
-    }
+      print(f'{self.lno} - {self.test_cd} validate data cannot retrieved')
+      return {self.keys[i]:'' for i in range(len(self.keys))}
+      
+    return {self.keys[i]:record[i] if not record[i] is None else '' for i in range(len(record))}
+
 
 
 class Phone(_Id):
 
   def __init__(self, conn, lno, test_cd):
     super().__init__(conn, lno, test_cd)
+    self.keys = {'by_cd', 'by_nm', 'on', 'to', 'note'}
 
   def get(self):
     
@@ -83,19 +79,15 @@ class Phone(_Id):
     '''
     params = {'lno' : self.lno, 'test_cd' : self.test_cd}
 
-    with self.conn:
-      record = self.conn.execute(sql,params).fetchone()
+    with self.engine.connect() as conn:
+      record = conn.execute(sql,params).fetchone()
+
 
     if record is None:
-      raise ValueError('Phone data cannot retrieved')
+      print(f'{self.lno} - {self.test_cd} phone data cannot retrieved')
+      return {self.keys[i]:'' for i in range(len(self.keys))}
 
-    return {
-      'by_cd' : record[0],
-      'by_nm' : record[1],
-      'on' : record[2],
-      'to' : record [3],
-      'note' : record[4]
-    }
+    return {self.keys[i]:record[i] if not record[i] is None else '' for i in range(len(record))}
 
 
 @dataclass
@@ -104,6 +96,7 @@ class Result:
   conn:object
   lno:str
   ono:str
+  seqno:str
   test_cd:str
   test_nm:str
   data_type:str
@@ -119,9 +112,11 @@ class Result:
   order_testnm:str
   test_group:str
   item_parent:str
-  specimen:dict[str:str] = field(init=False)
-  validate:dict[str:str] = field(init=False)
-  phone:dict[str:str] = field(init=False)
+  his_detail:str = field(default='')
+  his_header:str = field(default='')
+  specimen:dict = field(init=False)
+  validate:dict = field(init=False)
+  phone:dict = field(init=False)
   method:str = field(init=False)
 
   def __post_init__(self):

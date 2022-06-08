@@ -1,4 +1,3 @@
-#!.venv/scripts/pythonw.exe
 import threading
 import logging
 import os
@@ -45,7 +44,7 @@ class Process():
       self.__ora = db.create_engine(f"oracle://{ora['user']}:{ora['pass']}@{ora['host']}:{ora['port']}/{ora['db']}")
 
       his = self.__app['his']
-      self.__his = db.create_engine(f"mssql+pyodbc://{his['user']}:{his['pass']}@{his['host']}:{his['port']}/{his['db']}")
+      self.__his = db.create_engine(f"mysql+mysqlconnector://{his['user']}:{his['pass']}@{his['host']}:{his['port']}/{his['db']}")
 
       try:
         self.__thread = threading.Thread(target=self.check)
@@ -76,7 +75,8 @@ class Process():
                       logging.error(err)
                       print(err)
                       self.__label.config(text=err)
-                      time.sleep(2)
+                      copy(file,os.path.join(self.__app['file']['err_result'],os.path.basename(file)))
+                      os.remove(file)
                       continue
                   else:
                       os.remove(file)
@@ -108,17 +108,18 @@ class Process():
 
         # delete when status is 'D'
         if obx['status'] == 'D' : 
-          delete(self.__his,result.ono,obx['test_cd'])
+          delete(self.__his,r01.ono,obx['test_cd'])
           counter += 1
           continue
 
         if obx['test_cd'] == 'MBFTR':
           obx.update(test_cd = r01.order_testid, test_nm = r01.order_testnm)
 
-        result_value = obx['result_value'] if obx['status'] != 'FT' else ''
-        result_ft = obx['result_value'] if obx['status'] == 'FT' else ''
+        result_value = obx['result_value'] if obx['data_type'] != 'FT' else ''
+        result_ft = obx['result_value'] if obx['data_type'] == 'FT' else ''
 
-        item = Item(self.__ora, obx['test_cd'])
+        item = Item(self.__ora, obx['test_cd'], r01.lno)
+      
 
         disp_seq = f'{item.group_seq}_{item.seq}_{("000"+str(counter))[-3:]}' 
 
@@ -126,6 +127,7 @@ class Process():
         result = Result(self.__ora,
                         r01.lno,
                         r01.ono,
+                        str(counter),
                         obx['test_cd'],
                         obx['test_nm'],
                         obx['data_type'],
@@ -140,9 +142,12 @@ class Process():
                         r01.order_testid,
                         r01.order_testnm,
                         item.group_name,
-                        item.parent)
+                        item.parent,
+                        '',
+                        '')
 
-        save_detail(self.__ora, result)
+
+        save_detail(self.__his, result)
 
         # check is it profile test
         if result.order_testid != obx['test_cd']:
@@ -153,7 +158,7 @@ class Process():
 
       if profile:
 
-        item = Item(self.__ora, r01.order_testid)
+        item = Item(self.__ora, r01.lno, r01.order_testid)
         disp_seq = f'{item.group_seq}_{item.seq}_000' 
 
         # save test header
@@ -161,6 +166,7 @@ class Process():
           self.__ora,
           r01.lno,
           r01.ono,
+          str(counter),
           r01.order_testid,
           r01.order_testnm,
           'ST',
@@ -175,9 +181,11 @@ class Process():
           r01.order_testid,
           r01.order_testnm,
           item.group_name,
-          '000000'
+          '000000',
+          '',
+          ''
         )
-        save_detail(self.__ora, result)
+        save_detail(self.__his, result)
 
 
       # save header

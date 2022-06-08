@@ -1,37 +1,27 @@
 def insert(engine:object, result:object):
 
   sql = '''
-    insert into TRX_SYS_RES_DT
+    insert into ResultDt
     (
-      ono, test_cd, test_nm, data_typ, 
+      id, ono, seqno, test_cd, test_nm, data_typ, 
       result_value, result_ft, unit, flag, ref_range, status, test_comment, 
       validate_by, validate_on,
-      disp_seq, order_testid, order_testnm, test_group, item_parent
+      disp_seq, order_testid, order_testnm, test_group, item_parent, orgcd, createddate
     )
     select
-      :ono, :test_cd, :test_nm, :data_type, :result_value, :result_ft, :unit, :flag, :ref_range,
-      :status, :test_comment, :validate_by, :validate_on, :disp_seq, 
-      :order_testid, :order_testnm, :test_group, :item_parent
-    where not exists (select 1 from TRX_SYS_RES_DT where ono=:ono and test_cd=:test_cd)
+      ?,?,?,?,?,?,
+      ?,?,?,?,?,?,?, 
+      ?,?,
+      ?,?,?,?,?,?, getdate()
+    where not exists (select 1 from ResultDt where ono=? and test_cd=? and orgcd=?)
   '''
-  params = {
-    'ono' : result.ono,
-    'test_cd' : result.test_cd,
-    'test_nm' : result.test_nm,
-    'result_value' : result.result_value,
-    'result_ft' : result.result_ft,
-    'unit' : result.unit,
-    'flag' : result.flag,
-    'status' : result.status,
-    'test_comment' : result.test_comment,
-    'validate_by' : result.validate['authorise_by_cd'] + '^' + result.validate['authorise_by_nm'],
-    'validate_on' : result.validate['authorise_on'],
-    'disp_seq' : result.disp_seq,
-    'order_testid' : result.order_testid,
-    'order_testnm' : result.order_testnm,
-    'test_group' : result.test_group,
-    'item_parent' : result.item_parent
-  }
+  params = (
+    result.ono, result.ono, result.seqno, result.test_cd, result.test_nm, result.data_type,
+    result.result_value, result.result_ft,result.unit,result.flag,result.ref_range,result.status,result.test_comment,
+    result.validate['authorise_by_cd']+'^'+result.validate['authorise_by_nm'], result.validate['authorise_on'],
+    result.disp_seq, result.order_testid,result.order_testnm,result.test_group,result.item_parent,result.site,
+    result.ono,result.test_cd,result.site
+  )
 
   try:
     with engine.connect() as conn:
@@ -43,28 +33,20 @@ def insert(engine:object, result:object):
 def update(engine:object, result:object):
 
   sql = """
-    update TRX_SYS_RES_DT set
-    test_nm= :test_nm , result_value= :result_value, result_ft= :result_ft, ref_range= :ref_range, unit = :unit,
-    status= :status, test_comment= :test_comment, validate_on= :validate_on, validate_by= :validate_by, 
-    disp_seq= :disp_seq, test_group= :test_group
-    where ono= :ono and test_cd= :test_cd
+    update ResultDt set
+    test_nm=? , result_value=?, result_ft=?, ref_range=?, unit = ?,
+    status=?, test_comment=?, 
+    validate_on=?, validate_by=?,
+    disp_seq=?, test_group=?
+    where ono=? and test_cd=? and orgcd=?
   """
-
-  params = {
-    'ono' : result.ono,
-    'test_cd' : result.test_cd,
-    'test_nm' : result.test_nm,
-    'result_value' : result.result_value,
-    'result_ft' : result.result_ft,
-    'unit' : result.unit,
-    'flag' : result.flag,
-    'status' : result.status,
-    'test_comment' : result.test_comment,
-    'validate_by' : result.validate['authorise_by_cd'] + '^' + result.validate['authorise_by_nm'],
-    'validate_on' : result.validate['authorise_on'],
-    'disp_seq' : result.disp_seq,
-    'test_group' : result.test_group
-  }
+  params = (
+    result.test_nm, result.result_value,result.result_ft,result.ref_range,result.unit,
+    result.status, result.test_comment,
+    result.validate['authorise_on'], result.validate['authorise_by_cd']+'^'+result.validate['authorise_by_nm'],
+    result.disp_seq,result.test_group,
+    result.ono,result.test_cd,result.site
+  )
 
   try:
     with engine.connect() as conn:

@@ -5,6 +5,7 @@ from shutil import copy
 
 @dataclass
 class Order:
+  id:int
   message_dt:str
   order_control:str
   site:str
@@ -23,6 +24,7 @@ class Order:
   pstatus:str
   comment:str
   tests:str
+  room_no:str = field(default='')
   email:str = field(default='')
   phone:str = field(default='')
   apid:str = field(default='')
@@ -51,17 +53,17 @@ class Order:
     line = line + f"request_dt={self.request_dt}\n"
     line = line + f"source={self.source['code']}^{self.source['name']}\n"
     line = line + f"clinician={self.clinician['code']}^{self.clinician['name']}\n"
-    line = line + f"room_no={self.source['room_no']}\n"
+    line = line + f"room_no={self.room_no}\n"
     line = line + f"priority={self.priority}\n"
     line = line + f"pstatus={self.pstatus}\n"
     line = line + f"comment={self.comment}\n"
     line = line + f"visitno={self.visitno}\n"
     line = line + f"order_testid={self.tests}\n"
     
-    with open(os.path.join(backup, f"O01_{self.data['ono']}_{self.data['message_dt']}"),'w') as f:
+    with open(os.path.join(backup, f"O01_{self.ono}_{self.message_dt}.txt"),'w') as f:
       f.writelines(line)
-
-    copy(backup,dest)
+    
+    copy(os.path.join(backup, f"O01_{self.ono}_{self.message_dt}.txt"),dest)
 
   def createA04(self, dest:str, backup:str):
     line = "[MSH]\n"
@@ -89,8 +91,50 @@ class Order:
     line = line + f"visit_number=\n"
     line = line + f"date={self.message_dt[:8]}\n" 
 
-    with open(os.path.join(backup, f"A04_{self.data['ono']}_{self.data['message_dt']}"),'w') as f:
+    with open(os.path.join(backup, f"A04_{self.ono}_{self.message_dt}.txt"),'w') as f:
       f.writelines(line)
 
-    copy(backup,dest)
 
+    copy(os.path.join(backup, f"A04_{self.ono}_{self.message_dt}.txt"),dest)
+
+  def save_lisorder(self, engine:object):
+    sql = """
+    insert into lisorders
+    (
+      "id", message_dt, ono, order_control, pid, apid, pname, address, 
+      ptype, birth_dt, sex, request_dt, clinician, source, room_no, priority, visitno, order_testid
+    )
+    values 
+    (
+      :id, :message_dt, :ono, :order_control, :pid, :apid, :name, :address,
+      :ptype, :birth_dt, :sex, :request_dt, :clinician, :source, :room_no, :priority, :visitno, :order_testid
+    )
+  """
+    params = {
+      'id' : self.id,
+      'message_dt' : self.message_dt,
+      'ono' : self.ono,
+      'order_control' : self.order_control,
+      'pid' : self.pid,
+      'apid' : self.apid,
+      'name' : self.name,
+      'address' : '^'.join([addr for addr in self.address.values()]),
+      'ptype' : self.ptype,
+      'birth_dt' : self.birth_dt,
+      'sex' : self.sex,
+      'request_dt' : self.request_dt,
+      'clinician' : '^'.join([ c for c in self.clinician.values()]),
+      'source' : '^'.join([ s for s in self.source.values()]),
+      'room_no' : self.room_no,
+      'priority' : self.priority,
+      'visitno' : self.visitno,
+      'order_testid' : self.tests
+    }
+
+    try:
+      with engine.connect() as conn:
+        conn.execute(sql,params)
+    except ConnectionError as e:
+      raise ConnectionError(f'Connecting to LISORDERS in HCLAB DB failed. {e}')
+    except ValueError as e:
+      raise ValueError(f'Cannot insert data {self.ono} to LISORDERS in HCLAB DB. {e}')
